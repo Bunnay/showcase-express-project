@@ -1,7 +1,6 @@
 import authHandler from "../handlers/authHandler";
 import User, { CreateUser } from "../models/user";
-import { LoginRequestData, LoginResponseData } from "../types/auth";
-import { UserInfo } from "../types/express";
+import { ILoginRequestData, ILoginResponseData } from "../types/auth";
 
 class AuthProvider {
   // Register user
@@ -14,7 +13,7 @@ class AuthProvider {
   }
 
   //  Login
-  async login(loginData: LoginRequestData): Promise<LoginResponseData> {
+  async login(loginData: ILoginRequestData): Promise<ILoginResponseData> {
     const { username, password } = loginData;
 
     const response = await authHandler.validate(username, password);
@@ -22,11 +21,11 @@ class AuthProvider {
     return response;
   }
 
-  //  Login
-  refreshToken(refresh_token: string): UserInfo {
-    const decoded = authHandler.verifyToken(refresh_token) as UserInfo;
+  //  Refresh token
+  refresh(refresh_token: string): Promise<ILoginResponseData> {
+    const response = authHandler.refreshToken(refresh_token);
 
-    return decoded;
+    return response;
   }
 }
 

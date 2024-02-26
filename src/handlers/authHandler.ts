@@ -1,20 +1,29 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import User from "../models/user";
-import { LoginResponseData } from "../types/auth";
+import { ILoginResponseData } from "../types/auth";
 import { omitKeyFromObj } from "../utils/objHelper";
+import { IUserInfo } from "../types/express";
+import ErrorHandler from "../handlers/errorHandler";
 
 class AuthHandler {
   // Create token
-  createToken(user_id: number, expires_in: string | number = "15m"): string {
-    return jwt.sign({ user_id }, process.env.JWT_SECRET_TOKEN || "", {
-      expiresIn: expires_in || "15m",
+  createToken(
+    user_id: number,
+    secret_key: string | undefined,
+    expires_in: string | number = "15m"
+  ): string {
+    return jwt.sign({ user_id }, secret_key || "", {
+      expiresIn: expires_in,
     });
   }
 
   // Verify token
-  verifyToken(token: string): string | JwtPayload {
-    return jwt.verify(token, process.env.JWT_SECRET_TOKEN || "");
+  verifyToken(
+    token: string,
+    secret_key: string | undefined
+  ): string | JwtPayload {
+    return jwt.verify(token, secret_key || "");
   }
 
   // Hash password
@@ -31,7 +40,7 @@ class AuthHandler {
   async validate(
     username: string,
     password: string
-  ): Promise<LoginResponseData> {
+  ): Promise<ILoginResponseData> {
     const user = await User.scope("withPassword").findOne({
       where: {
         username: username || "",
@@ -44,15 +53,55 @@ class AuthHandler {
       throw Error("Username or password is not correct");
     }
 
-    const expires_in = process.env.ACCESS_TOKEN_EXPIRY || "1d";
-    const access_token = this.createToken(userData.id, expires_in);
-    const refresh_token = this.createToken(userData.id, expires_in);
+    const access_token = this.createToken(
+      userData.id,
+      process.env.JWT_SECRET_ACCESS_TOKEN,
+      process.env.ACCESS_TOKEN_EXPIRY || "15m"
+    );
+
+    const refresh_token = this.createToken(
+      userData.id,
+      process.env.JWT_SECRET_REFRESH_TOKEN,
+      process.env.REFRESH_TOKEN_EXPIRY || "7d"
+    );
 
     return {
       user: omitKeyFromObj("password", userData),
       access_token,
       refresh_token,
     };
+  }
+
+  // Refresh token and get new access token
+  async refreshToken(refresh_token: string): Promise<ILoginResponseData> {
+    const decoded = this.verifyToken(
+      refresh_token,
+      process.env.JWT_SECRET_REFRESH_TOKEN
+    ) as IUserInfo;
+
+    if (!decoded) {
+      throw Error("Refresh token is invalid or expired.");
+    }
+
+    const user = await User.findByPk(decoded?.user_id);
+
+    if (!user) {
+      throw new ErrorHandler().notFound();
+    }
+
+    const access_token = this.createToken(
+      user.id,
+      process.env.JWT_SECRET_ACCESS_TOKEN,
+      process.env.ACCESS_TOKEN_EXPIRY || "15m"
+    );
+
+    const response = {
+      user: user,
+      access_token,
+      refresh_token,
+    };
+
+    return response;
   }
 }
 

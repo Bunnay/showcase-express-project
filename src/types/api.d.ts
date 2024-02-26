@@ -2,11 +2,14 @@ import { IPagination } from "./pagination";
 
 export interface IBaseResponseData {
   success: boolean;
-  status?: number;
   message: string;
 }
 
-interface IErrorReponseData extends IBaseResponseData {
+export interface IBaseErrorResponseData extends IBaseResponseData {
+  status: number;
+}
+
+export interface IErrorReponseData extends IBaseResponseData {
   errors: Error;
 }
 

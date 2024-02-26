@@ -1,9 +1,11 @@
+import QueryHandler from "../handlers/queryHandler";
 import User, { CreateUser, UpdateUser } from "../models/user";
+import { IQuery } from "../types/query";
 
 const allowedQueryFields = {
   filter: ["id"],
-  sort: ["id", "name"],
-  search: ["name"],
+  sort: ["id", "username"],
+  search: ["username"],
   include: [
     "roles",
     "roles.permissions",
@@ -14,22 +16,35 @@ const allowedQueryFields = {
 
 class UserProvider {
   // Get all users
-  async getAllUser(): Promise<{ total: number; users: User[] }> {
-    const { count: total, rows: users } = await User.findAndCountAll();
+  async getAllUser(
+    query: Partial<IQuery>
+  ): Promise<{ total: number; users: User[] }> {
+    const { count: total, rows: users } = await User.findAndCountAll(
+      QueryHandler.processQueryParams(query, allowedQueryFields)
+    );
 
     return { total, users };
   }
 
   //   Get current user
-  async getCurrentUser(id: number): Promise<User | null> {
-    const user = await User.findByPk(id);
+  async getCurrentUser(
+    id: number,
+    query: Partial<IQuery>
+  ): Promise<User | null> {
+    const user = await User.findByPk(
+      id,
+      QueryHandler.processQueryParams(query, allowedQueryFields)
+    );
 
     return user;
   }
 
   //   Get user by id
-  async getUserById(id: number): Promise<User | null> {
-    const user = await User.findByPk(id);
+  async getUserById(id: number, query: Partial<IQuery>): Promise<User | null> {
+    const user = await User.findByPk(
+      id,
+      QueryHandler.processQueryParams(query, allowedQueryFields)
+    );
 
     return user;
   }
@@ -49,7 +64,6 @@ class UserProvider {
 
     if (user) {
       await user.update(updateData);
-
       return user.save();
     }
 
@@ -62,7 +76,6 @@ class UserProvider {
 
     if (user) {
       await user.destroy();
-
       return user.save();
     }
 

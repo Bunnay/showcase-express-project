@@ -15,18 +15,18 @@ export interface IFilter {
   [key: string]: string;
 }
 
-export interface SQLQuery {
+export interface ISqlQuery {
   where: object;
-  include: Include[];
+  include: IInclude[];
   order: string[][];
   offset: number | string;
   limit: number | string;
 }
 
-export interface Include {
+export interface IInclude {
   model: any;
   as: string | undefined;
   through: any;
-  include?: Include[];
+  include?: IInclude[];
   required?: boolean;
 }

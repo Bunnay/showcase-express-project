@@ -123,6 +123,20 @@ class SuccessHandler {
       data: data,
     };
   }
+
+  getForgotPasswordData(): IBaseResponseData {
+    return {
+      success: true,
+      message: "Email have sent to your email. Please check!",
+    };
+  }
+
+  getResetPasswordData(): IBaseResponseData {
+    return {
+      success: true,
+      message: "Your password has been reset successfully!",
+    };
+  }
 }
 
 export default new SuccessHandler();

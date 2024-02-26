@@ -1,11 +1,11 @@
 import User from "../models/user";
 
-export interface LoginRequestData {
+export interface ILoginRequestData {
   username: string;
   password: string;
 }
 
-export interface LoginResponseData {
+export interface ILoginResponseData {
   access_token: string;
   refresh_token: string;
   user: User;

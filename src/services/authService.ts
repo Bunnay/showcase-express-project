@@ -1,10 +1,9 @@
 import ErrorHandler from "../handlers/errorHandler";
 import User, { CreateUser } from "../models/user";
 import AuthProvider from "../providers/authProvider";
-import { IResponseData } from "../types/api";
+import { IBaseErrorResponseData, IResponseData } from "../types/api";
 import SuccessHandler from "../handlers/successHandler";
-import { LoginRequestData, LoginResponseData } from "../types/auth";
-import AuthHandler from "../handlers/authHandler";
+import { ILoginRequestData, ILoginResponseData } from "../types/auth";
 
 class AuthService {
   public authProvider;
@@ -13,52 +12,51 @@ class AuthService {
     this.authProvider = AuthProvider;
   }
 
+  // Register
   async register(userData: CreateUser): Promise<IResponseData<User>> {
-    const user = await this.authProvider.register(userData);
+    try {
+      const user = await this.authProvider.register(userData);
 
-    if (!user) {
-      throw ErrorHandler.notFound();
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getCreatedData<User>(user);
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getCreatedData<User>(user);
-
-    return response;
   }
 
+  // Login
   async login(
-    loginData: LoginRequestData
-  ): Promise<IResponseData<LoginResponseData>> {
-    const loginInfo = await this.authProvider.login(loginData);
+    loginData: ILoginRequestData
+  ): Promise<IResponseData<ILoginResponseData>> {
+    try {
+      const loginInfo = await this.authProvider.login(loginData);
 
-    const response = SuccessHandler.getLoginData<LoginResponseData>(loginInfo);
+      const response =
+        SuccessHandler.getLoginData<ILoginResponseData>(loginInfo);
 
-    return response;
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
+    }
   }
 
-  async refreshToken(refresh_token: string) {
-    const requestData = this.authProvider.refreshToken(refresh_token);
+  // Refresh token
+  async refresh(refresh_token: string) {
+    try {
+      const response = await this.authProvider.refresh(refresh_token);
 
-    if (!requestData) {
-      throw Error("Refresh token is invalid or expired.");
+      const newResponse =
+        SuccessHandler.getRefreshData<ILoginResponseData>(response);
+
+      return newResponse;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const user = await User.findByPk(requestData?.user_id);
-
-    if (!user) {
-      throw ErrorHandler.notFound();
-    }
-
-    const access_token = AuthHandler.createToken(user.id);
-
-    const dataForm = {
-      user: user,
-      access_token,
-      refresh_token,
-    };
-
-    const response = SuccessHandler.getRefreshData<LoginResponseData>(dataForm);
-
-    return response;
   }
 }
 

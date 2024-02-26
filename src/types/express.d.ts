@@ -1,10 +1,10 @@
 declare module "express" {
   interface Request {
-    user?: UserInfo;
+    user?: IUserInfo;
   }
 }
 
-export interface UserInfo {
+export interface IUserInfo {
   user_id: number;
   iat: number | string;
   exp: number | string;

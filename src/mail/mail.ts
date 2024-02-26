@@ -1,39 +1,17 @@
 import transporter from "./nodemailer";
-import { SentMessageInfo } from "nodemailer";
+import { SentMessageInfo, SendMailOptions } from "nodemailer";
 
 class Mail {
-  public from: string;
-  public to: string;
-  public subject: string;
-  public text: string;
-  public html: string;
+  private options: SendMailOptions;
 
-  constructor(
-    from: string,
-    to: string,
-    subject: string,
-    text: string,
-    html: string
-  ) {
-    this.from = from;
-    this.to = to;
-    this.subject = subject;
-    this.text = text;
-    this.html = html;
+  constructor(options: SendMailOptions) {
+    this.options = options;
   }
 
-  send(to: string, subject: string, text: string): Promise<SentMessageInfo> {
-    try {
-      return transporter.sendMail({
-        from: this.from,
-        to: this.to,
-        subject: this.subject,
-        text: this.text,
-        html: this.html,
-      });
-    } catch (error) {
+  async send(): Promise<SentMessageInfo> {
+    return transporter.sendMail(this.options).catch((error) => {
       throw error;
-    }
+    });
   }
 }
 

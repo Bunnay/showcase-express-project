@@ -2,6 +2,7 @@ import ErrorHandler from "../handlers/errorHandler";
 import User, { CreateUser, UpdateUser } from "../models/user";
 import UserProvider from "../providers/userProvider";
 import {
+  IBaseErrorResponseData,
   IBaseResponseData,
   IPaginateResponseData,
   IResponseData,
@@ -16,81 +17,117 @@ class UserService {
     this.userProvider = UserProvider;
   }
 
+  // Get all users
   async getAllUsers(
     query: Partial<IQuery>
   ): Promise<IPaginateResponseData<User[]>> {
-    const { total, users } = await this.userProvider.getAllUser();
+    try {
+      const { total, users } = await this.userProvider.getAllUser(query);
 
-    const response = SuccessHandler.getAllDataWithPagination<User[]>(
-      users,
-      query,
-      total
-    );
+      const response = SuccessHandler.getAllDataWithPagination<User[]>(
+        users,
+        query,
+        total
+      );
 
-    return response;
-  }
-
-  async getUserById(id: number): Promise<IResponseData<User>> {
-    const user = await this.userProvider.getUserById(id);
-
-    if (!user) {
-      throw ErrorHandler.notFound();
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getOneData<User>(user);
-
-    return response;
   }
 
-  async getCurrentUser(id: number): Promise<IResponseData<User>> {
-    const user = await this.userProvider.getCurrentUser(id);
+  // Get user by id
+  async getUserById(
+    id: number,
+    query: Partial<IQuery>
+  ): Promise<IResponseData<User>> {
+    try {
+      const user = await this.userProvider.getUserById(id, query);
 
-    if (!user) {
-      throw ErrorHandler.notFound();
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getOneData<User>(user);
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getOneData<User>(user);
-
-    return response;
   }
 
+  // Get current user
+  async getCurrentUser(
+    id: number,
+    query: Partial<IQuery>
+  ): Promise<IResponseData<User>> {
+    try {
+      const user = await this.userProvider.getCurrentUser(id, query);
+
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getOneData<User>(user);
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
+    }
+  }
+
+  // Create user
   async createUser(userData: CreateUser): Promise<IResponseData<User>> {
-    const user = await this.userProvider.createUser(userData);
+    try {
+      const user = await this.userProvider.createUser(userData);
 
-    if (!user) {
-      throw ErrorHandler.notFound();
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getCreatedData<User>(user);
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getCreatedData<User>(user);
-
-    return response;
   }
 
+  // Update user
   async updateUser(
     id: number,
     userData: UpdateUser
   ): Promise<IResponseData<User>> {
-    const user = await this.userProvider.updateUser(id, userData);
+    try {
+      const user = await this.userProvider.updateUser(id, userData);
 
-    if (!user) {
-      throw ErrorHandler.notFound();
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getUpdatedData<User>(user);
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getUpdatedData<User>(user);
-
-    return response;
   }
 
+  // Delete user
   async deleteUser(id: number): Promise<IBaseResponseData> {
-    const user = await this.userProvider.deleteUser(id);
+    try {
+      const user = await this.userProvider.deleteUser(id);
 
-    if (!user) {
-      throw ErrorHandler.notFound();
+      if (!user) {
+        throw new ErrorHandler().notFound();
+      }
+
+      const response = SuccessHandler.getDeletedData();
+
+      return response;
+    } catch (error) {
+      throw new ErrorHandler(error as IBaseErrorResponseData).render();
     }
-
-    const response = SuccessHandler.getDeletedData();
-
-    return response;
   }
 }
 
