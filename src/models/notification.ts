@@ -7,33 +7,7 @@ export interface CreateNotification
 export interface UpdateNotification
   extends Omit<Notification, "id" | "read_at"> {}
 
-class Notification extends Model {
-  private _id!: number;
-  private _title!: string;
-  private _body!: string;
-  private _read_at!: Date;
-  private _user_id!: number;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set title(title: string) {
-    this._title = title;
-  }
-
-  set body(body: string) {
-    this._body = body;
-  }
-
-  set read_at(read_at: Date) {
-    this._read_at = read_at;
-  }
-
-  set user_id(user_id: number) {
-    this._user_id = user_id;
-  }
-}
+class Notification extends Model {}
 
 Notification.init(
   {

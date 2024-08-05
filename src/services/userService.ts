@@ -1,133 +1,49 @@
-import ErrorHandler from "../handlers/errorHandler";
-import User, { CreateUser, UpdateUser } from "../models/user";
-import UserProvider from "../providers/userProvider";
-import {
-  IBaseErrorResponseData,
-  IBaseResponseData,
-  IPaginateResponseData,
-  IResponseData,
-} from "../types/api";
-import { IQuery } from "../types/query";
-import SuccessHandler from "../handlers/successHandler";
+import { Request, Response } from "express";
+import BaseService from "./baseService";
+import User from "../models/user";
+import RoleService from "./roleService";
+import AuthHelper from "../utils/authHelper";
+import { ErrorApiResponse } from "../models/apiResponse";
 
-class UserService {
-  public userProvider;
-
+class UserService extends BaseService<User> {
   constructor() {
-    this.userProvider = UserProvider;
+    super(User);
+
+    this.assignUserRole = this.assignUserRole.bind(this);
   }
 
-  // Get all users
-  async getAllUsers(
-    query: Partial<IQuery>
-  ): Promise<IPaginateResponseData<User[]>> {
-    try {
-      const { total, users } = await this.userProvider.getAllUser(query);
+  // Get current user info
+  async getCurrentUserInfoOrFail(req: Request) {
+    const token = AuthHelper.extractToken(req);
 
-      const response = SuccessHandler.getAllDataWithPagination<User[]>(
-        users,
-        query,
-        total
-      );
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
+    if (!token) {
+      throw ErrorApiResponse.Unauthorized();
     }
+
+    const userInfo = await AuthHelper.verifyToken(
+      token,
+      process.env.JWT_SECRET_ACCESS_TOKEN
+    ).catch(() => {
+      throw ErrorApiResponse.Unauthorized();
+    });
+
+    return userInfo;
   }
 
-  // Get user by id
-  async getUserById(
-    id: number,
-    query: Partial<IQuery>
-  ): Promise<IResponseData<User>> {
-    try {
-      const user = await this.userProvider.getUserById(id, query);
+  // Assign roles to user
+  async assignUserRole(user_id: number, role_ids: number[]): Promise<User> {
+    const user = await this.findByIdOrFail(user_id);
+    const allRolesToAdd = [];
 
-      if (!user) {
-        throw new ErrorHandler().notFound();
-      }
-
-      const response = SuccessHandler.getOneData<User>(user);
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
+    for (const role_id of role_ids) {
+      const role = await RoleService.findByIdOrFail(role_id);
+      allRolesToAdd.push(role);
     }
-  }
 
-  // Get current user
-  async getCurrentUser(
-    id: number,
-    query: Partial<IQuery>
-  ): Promise<IResponseData<User>> {
-    try {
-      const user = await this.userProvider.getCurrentUser(id, query);
+    await user.setRoles(allRolesToAdd);
+    await user.save();
 
-      if (!user) {
-        throw new ErrorHandler().notFound();
-      }
-
-      const response = SuccessHandler.getOneData<User>(user);
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
-    }
-  }
-
-  // Create user
-  async createUser(userData: CreateUser): Promise<IResponseData<User>> {
-    try {
-      const user = await this.userProvider.createUser(userData);
-
-      if (!user) {
-        throw new ErrorHandler().notFound();
-      }
-
-      const response = SuccessHandler.getCreatedData<User>(user);
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
-    }
-  }
-
-  // Update user
-  async updateUser(
-    id: number,
-    userData: UpdateUser
-  ): Promise<IResponseData<User>> {
-    try {
-      const user = await this.userProvider.updateUser(id, userData);
-
-      if (!user) {
-        throw new ErrorHandler().notFound();
-      }
-
-      const response = SuccessHandler.getUpdatedData<User>(user);
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
-    }
-  }
-
-  // Delete user
-  async deleteUser(id: number): Promise<IBaseResponseData> {
-    try {
-      const user = await this.userProvider.deleteUser(id);
-
-      if (!user) {
-        throw new ErrorHandler().notFound();
-      }
-
-      const response = SuccessHandler.getDeletedData();
-
-      return response;
-    } catch (error) {
-      throw new ErrorHandler(error as IBaseErrorResponseData).render();
-    }
+    return user;
   }
 }
 

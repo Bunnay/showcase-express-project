@@ -24,6 +24,7 @@
     "express": "^4.18.2",
     "fs": "^0.0.1-security",
     "handlebars": "^4.7.8",
+    "inflection": "^3.0.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.9.1",
     "nodemailer": "^6.9.10",

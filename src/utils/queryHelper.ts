@@ -1,34 +1,32 @@
 import { Op } from "sequelize";
-import { IInclude, ISqlQuery } from "../types/query";
-import User from "../models/user";
-import { Model } from "sequelize";
-import { Request } from "express";
+import { IInclude } from "../types/query";
+import models from "./../models/index";
+var inflection = require("inflection");
 
-interface CustomModel {
-  [key: string]: typeof Model<any, any>;
+function isPlural(str: string): boolean {
+  return str === inflection.pluralize(str) ? true : false;
 }
-
-const associationHandler = (modelName: string) => {
-  const associationModel = ["roles", "permissions", "users"];
-  associationModel.includes(modelName) ? { attributes: [] } : undefined;
-};
-
-export const customModel: CustomModel = {
-  users: User,
-};
 
 function mapInclude(str: string): IInclude | undefined {
   if (!str) return undefined;
 
   const [modelName, ...rest] = str.split(".");
+  const toModelNameSingular = inflection.transform(modelName, [
+    "singularize",
+    "classify",
+  ]);
+
+  const model = models[toModelNameSingular].model;
 
   const res: IInclude = {
-    model: customModel[modelName],
+    model: model,
     as: modelName || undefined,
-    through: associationHandler(modelName),
+    through: isPlural(modelName) ? { attributes: [] } : undefined,
+    required: false,
   };
 
   const restInclude = mapInclude(rest.join("."));
+
   if (restInclude) {
     res.include = [restInclude];
   }
@@ -36,7 +34,7 @@ function mapInclude(str: string): IInclude | undefined {
   return res;
 }
 
-class QueryHandler {
+class QueryHelper {
   // Process query filter
   private processQueryFilter(obj: any, allowed: any): any {
     if (!obj || typeof obj !== "object" || allowed.size === 0) return {};
@@ -123,4 +121,4 @@ class QueryHandler {
   }
 }
 
-export default new QueryHandler();
+export default new QueryHelper();

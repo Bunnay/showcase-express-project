@@ -6,21 +6,7 @@ export interface CreatePermission extends Omit<Permission, "id"> {}
 export interface UpdatePermission extends Omit<Permission, "id"> {}
 
 class Permission extends Model {
-  private _id!: number;
-  private _name!: string;
-  private _group_id!: string;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set name(name: string) {
-    this._name = name;
-  }
-
-  set group_id(group_id: string) {
-    this._group_id = group_id;
-  }
+  [propName: string]: any;
 }
 
 Permission.init(
@@ -59,7 +45,7 @@ Permission.init(
 
 Permission.belongsTo(PermissionGroup, {
   foreignKey: "group_id",
-  as: "group",
+  as: "permissionGroup",
 });
 
 PermissionGroup.hasMany(Permission, {

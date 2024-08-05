@@ -1,6 +1,6 @@
-import Validator, { registerAsync } from "validatorjs";
-import { Model, ModelStatic } from "sequelize";
+import Validator from "validatorjs";
 import sequelize from "../database/sequelize";
+import { Op } from "sequelize";
 
 export const registerCustomValidator = () => {
   Validator.register(
@@ -37,19 +37,23 @@ export const registerCustomValidator = () => {
       req: any,
       passes: (success: boolean, message?: string) => void
     ) => {
-      let [modelName, att] = attribute.split(".");
-
+      let [modelName, att, id] = attribute.split(".");
       let model = sequelize.models[modelName];
+      let whereClause: any = { [att]: value };
+
+      if (id) {
+        whereClause.id = { [Op.ne]: id };
+      }
 
       const count: number = await model.count({
-        where: { [att]: value },
+        where: whereClause,
       });
 
       if (count === 0) {
-        passes(true);
+        return passes(true);
       }
 
-      passes(false, `The ${att} has already been taken.`);
+      return passes(false, `The ${att} has already been taken.`);
     },
 
     "The :attribute has already been taken."

@@ -1,52 +1,39 @@
-import { CreateUser } from "../models/user";
-import authService from "../services/authService";
-import AuthHandler from "../handlers/authHandler";
-import { IBaseErrorResponseData } from "../types/api";
-import { Request, Response } from "express";
-import { ILoginRequestData } from "../types/auth";
+import { ILoginRequestData, ILoginResponseData } from "../types/auth";
+import AuthHelper from "../utils/authHelper";
 import Validator from "./../validation/validator";
-import {
-  LOGIN_RULES,
-  REFRESH_RULES,
-  REGISTER_RULES,
-} from "../validation/rules/auth";
+import { NextFunction, Request, Response } from "express";
+import { LOGIN_RULES, REFRESH_RULES } from "../validation/rules/auth";
+import { ApiResponse } from "../utils/apiResponseBuilder";
+import { AUTH_MESSAGES } from "../constants/authData";
+import { ErrorApiResponse } from "../models/apiResponse";
+
 const validator = new Validator();
 
 class AuthController {
-  // Register
-  public async register(req: Request, res: Response): Promise<void> {
-    try {
-      const registerUser: CreateUser = await validator.validate<CreateUser>(
-        req.body,
-        REGISTER_RULES
-      );
-
-      registerUser.password = AuthHandler.hashPassword(registerUser.password);
-
-      const response = await authService.register(registerUser);
-
-      res.json(response);
-    } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
-    }
-  }
-
-  // Login
-  public async login(req: Request, res: Response): Promise<void> {
+  // Login user
+  public async login(req: Request, res: Response) {
     try {
       const loginData: ILoginRequestData =
         await validator.validate<ILoginRequestData>(req.body, LOGIN_RULES);
 
-      const response = await authService.login(loginData);
+      const response = await AuthHelper.validate(
+        loginData.username,
+        loginData.password
+      );
 
-      res.json(response);
+      const successResponse = new ApiResponse<ILoginResponseData>()
+        .withData(response)
+        .withMessage(AUTH_MESSAGES.LOGIN_SUCCESS)
+        .BuildSuccessResponse();
+
+      res.json(successResponse);
     } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
+      ErrorApiResponse.handleError(error, res);
     }
   }
 
-  // Refresh
-  public async refresh(req: Request, res: Response): Promise<void> {
+  // Refresh token
+  public async refresh(req: Request, res: Response) {
     try {
       const { refresh_token }: { refresh_token: string } =
         await validator.validate<{ refresh_token: string }>(
@@ -54,11 +41,16 @@ class AuthController {
           REFRESH_RULES
         );
 
-      const response = await authService.refresh(refresh_token);
+      const response = await AuthHelper.refreshToken(refresh_token);
 
-      res.json(response);
+      const successResponse = new ApiResponse<ILoginResponseData>()
+        .withData(response)
+        .withMessage(AUTH_MESSAGES.REFRESH_TOKEN_SUCCESS)
+        .BuildSuccessResponse();
+
+      res.json(successResponse);
     } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
+      ErrorApiResponse.handleError(error, res);
     }
   }
 }

@@ -1,11 +1,11 @@
-import AuthHandler from "../../handlers/authHandler";
+import AuthHelper from "../../utils/authHelper";
 
 export const seedUsers = async () => {
   return [
     {
       username: "admin",
       email: "admin@gmail.com",
-      password: AuthHandler.hashPassword("password"),
+      password: AuthHelper.hashPassword("password"),
     },
   ];
 };

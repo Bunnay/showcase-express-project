@@ -1,103 +1,80 @@
 import { Request, Response } from "express";
-import { CreateUser, UpdateUser } from "../models/user";
-import userService from "../services/userService";
-import { IBaseErrorResponseData } from "../types/api";
-import AuthHandler from "../handlers/authHandler";
-import { IUserInfo } from "../types/express";
+import User from "../models/user";
+import { ApiResponse } from "../utils/apiResponseBuilder";
+import { RESPONSE_MESSAGES } from "../constants/apiResponseData";
 import { CREATE_USER_RULES, UPDATE_USER_RULES } from "../validation/rules/user";
-import Validator from "./../validation/validator";
-const validator = new Validator();
+import { ErrorApiResponse } from "../models/apiResponse";
+import Role from "../models/role";
+import Notification from "../models/notification";
+import BaseController from "./baseController";
+import UserService from "../services/userService";
+import QueryHelper from "../utils/queryHelper";
 
-class UserController {
-  // Get all users
-  public async getAllUsers(req: Request, res: Response): Promise<void> {
-    try {
-      const response = await userService.getAllUsers(req.query);
+const allowedQueryFields = {
+  filter: ["id"],
+  sort: ["id", "username"],
+  search: ["username"],
+  include: [
+    "roles",
+    "roles.permissions",
+    "roles.permissions.permissionGroup",
+    "nationality",
+  ],
+};
 
-      res.json(response);
-    } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
-    }
-  }
+class UserController extends BaseController<Role> {
+  constructor() {
+    super(UserService);
 
-  // Get user by id
-  public async getUserById(req: Request, res: Response): Promise<void> {
-    const user_id: number = Number(req.params.id);
-
-    try {
-      const response = await userService.getUserById(user_id, req.query);
-
-      res.json(response);
-    } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
-    }
+    this.create_rules = CREATE_USER_RULES;
+    this.update_rules = UPDATE_USER_RULES;
+    this.allowedQueryFields = allowedQueryFields;
   }
 
   // Get current user
-  public async getCurrentUser(req: Request, res: Response): Promise<void> {
-    const authorizedToken = req.header("Authorization") || "";
-    const accessToken = authorizedToken.replace("Bearer ", "");
-    const userInfo = AuthHandler.verifyToken(
-      accessToken,
-      process.env.JWT_SECRET_ACCESS_TOKEN
-    ) as IUserInfo;
-    const user_id = userInfo.user_id;
-
+  public async getCurrentUser(req: Request, res: Response) {
     try {
-      const response = await userService.getCurrentUser(user_id, req.query);
+      const userInfo = await UserService.getCurrentUserInfoOrFail(req);
 
-      res.json(response);
-    } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
-    }
-  }
-
-  // Create user
-  public async createUser(req: Request, res: Response): Promise<void> {
-    try {
-      const userData: CreateUser = await validator.validate<CreateUser>(
-        req.body,
-        CREATE_USER_RULES
+      const user = await UserService.findByIdOrFail(
+        userInfo?.user_id,
+        QueryHelper.processQueryParams(req.query, allowedQueryFields)
       );
 
-      userData.password = AuthHandler.hashPassword(userData.password);
+      const successResponse = new ApiResponse<User>()
+        .withData(user)
+        .withMessage(RESPONSE_MESSAGES.SUCCESS)
+        .BuildSuccessResponse();
 
-      const response = await userService.createUser(userData);
-
-      res.json(response);
+      res.json(successResponse);
     } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
+      ErrorApiResponse.handleError(error, res);
     }
   }
 
-  // Update user
-  public async updateUser(req: Request, res: Response): Promise<void> {
-    const user_id: number = Number(req.params.id);
-
+  // Assign user role
+  public async assignUserRole(req: Request, res: Response) {
     try {
-      const userData: UpdateUser = await validator.validate<UpdateUser>(
-        req.body,
-        UPDATE_USER_RULES
-      );
+      const { role_ids } = req.body;
+      const user_id: number = Number(req.params.id);
 
-      const response = await userService.updateUser(user_id, userData);
+      await UserService.assignUserRole(user_id, role_ids);
 
-      res.json(response);
+      await Notification.create({
+        user_id: Number(user_id),
+        title: RESPONSE_MESSAGES.ASSIGNED,
+        body: RESPONSE_MESSAGES.ASSIGNED,
+      });
+
+      const successResponse = new ApiResponse<User>()
+        .withMessage(
+          RESPONSE_MESSAGES.ASSIGNED(this.service.getModelDisplayName())
+        )
+        .BuildSuccessResponse();
+
+      res.json(successResponse);
     } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
-    }
-  }
-
-  // Delete user
-  public async deleteUser(req: Request, res: Response): Promise<void> {
-    const user_id: number = Number(req.params.id);
-
-    try {
-      const response = await userService.deleteUser(user_id);
-
-      res.json(response);
-    } catch (error) {
-      res.status((error as IBaseErrorResponseData).status).json(error);
+      ErrorApiResponse.handleError(error, res);
     }
   }
 }
