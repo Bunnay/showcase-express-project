@@ -1,22 +1,24 @@
-import ErrorHandler from "../handlers/errorHandler";
+import {
+  RESPONSE_MESSAGES,
+  RESPONSE_STATUS_CODES,
+} from "../constants/apiResponseData";
+import { ApiResponse } from "../utils/apiResponseBuilder";
 
-class ValidationError<T> extends ErrorHandler {
+class ValidationError<T> {
   public validator: Validator.Validator<T>;
-  public status: number;
+  public status_code: number;
 
   constructor(validator: Validator.Validator<T>) {
-    super();
     this.validator = validator;
-    this.status = 422;
+    this.status_code = RESPONSE_STATUS_CODES.UNPROCESSABLE_ENTITY;
   }
 
   render() {
-    return {
-      success: false,
-      status: this.status,
-      message: "Invalid data",
-      errors: this.validator.errors.all(),
-    };
+    return new ApiResponse()
+      .withStatusCode(this.status_code)
+      .withMessage(RESPONSE_MESSAGES.UNPROCESSABLE_ENTITY)
+      .withError(this.validator.errors.all())
+      .BuildErrorResponse();
   }
 }
 

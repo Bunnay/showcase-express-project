@@ -5,11 +5,17 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import sequelize from "../database/sequelize";
-import allRoutes from "../routes/index";
+import baseRoutes from "../routes/baseRoutes";
 import { seedUsers } from "../database/seeders/userSeeder";
 import User from "../models/user";
+import Role from "../models/role";
+import { seedRoles } from "../database/seeders/roleSeeder";
+import PermissionGroup from "../models/permissionGroup";
+import { seedPermissionGroups } from "../database/seeders/permissionGroupSeeder";
+import { seedPermissions } from "../database/seeders/permissionSeeder";
+import Permission from "../models/permission";
 
-class App {
+class AppHelper {
   public app;
 
   constructor() {
@@ -23,7 +29,7 @@ class App {
 
   // Method to define routes
   setupRoutes() {
-    this.app.use("/", allRoutes);
+    this.app.use("/", baseRoutes);
   }
 
   // Set up policy
@@ -50,8 +56,13 @@ class App {
 
   // Method to handle seeder
   async seeder(force: boolean = false) {
-    if (force) await User.bulkCreate(await seedUsers());
+    if (force) {
+      await User.bulkCreate(await seedUsers());
+      await Role.bulkCreate(await seedRoles());
+      await PermissionGroup.bulkCreate(await seedPermissionGroups());
+      await Permission.bulkCreate(await seedPermissions());
+    }
   }
 }
 
-export default App;
+export default AppHelper;

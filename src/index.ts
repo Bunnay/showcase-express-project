@@ -1,6 +1,6 @@
-import App from "./handlers/appHandler";
+import AppHelper from "./utils/appHelper";
 
-const app = new App();
+const app = new AppHelper();
 app.setupMiddleware();
 app.setupCorsPolicy();
 app.setupRoutes();

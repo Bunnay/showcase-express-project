@@ -5,23 +5,7 @@ import Category from "./category";
 export interface CreateProduct extends Omit<Product, "id"> {}
 export interface UpdateProduct extends Omit<Product, "id"> {}
 
-class Product extends Model {
-  private _id!: number;
-  private _name!: string;
-  private _category_id!: number;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set name(name: string) {
-    this._name = name;
-  }
-
-  set category_id(category_id: number) {
-    this._category_id = category_id;
-  }
-}
+class Product extends Model {}
 
 Product.init(
   {
@@ -37,9 +21,9 @@ Product.init(
     },
     category_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
-        model: "category",
+        model: "categories",
         key: "id",
       },
       onUpdate: "CASCADE",

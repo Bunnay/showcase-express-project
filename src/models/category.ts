@@ -4,18 +4,7 @@ import sequelize from "../database/sequelize";
 export interface CreateCategory extends Omit<Category, "id"> {}
 export interface UpdateCategory extends Omit<Category, "id"> {}
 
-class Category extends Model {
-  private _id!: number;
-  private _name!: string;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set name(name: string) {
-    this._name = name;
-  }
-}
+class Category extends Model {}
 
 Category.init(
   {

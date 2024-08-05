@@ -44,6 +44,27 @@ class Validator {
   throwError<T>(validation: BaseValidator.Validator<T>) {
     throw new ValidationError<T>(validation).render();
   }
+
+  excludeUniqueIdToRules(rules: any, id?: string | number) {
+    const modifiedRules = { ...rules };
+
+    Object.keys(modifiedRules).forEach((field) => {
+      if (modifiedRules[field].includes("unique:")) {
+        const parts = modifiedRules[field].split("|");
+        const uniqueIndex = parts.findIndex((part: any) =>
+          part.startsWith("unique:")
+        );
+        if (uniqueIndex !== -1) {
+          if (id) {
+            parts[uniqueIndex] = `${parts[uniqueIndex]}.${id}`;
+          }
+          modifiedRules[field] = parts.join("|");
+        }
+      }
+    });
+
+    return modifiedRules;
+  }
 }
 
 export default Validator;

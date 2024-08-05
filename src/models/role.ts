@@ -6,16 +6,7 @@ export interface CreateRole extends Omit<Role, "id"> {}
 export interface UpdateRole extends Omit<Role, "id"> {}
 
 class Role extends Model {
-  private _id!: number;
-  private _name!: string;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set name(name: string) {
-    this._name = name;
-  }
+  [propName: string]: any;
 }
 
 Role.init(

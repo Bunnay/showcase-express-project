@@ -1,12 +1,16 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { Request, Response } from "express";
 import User from "../models/user";
 import { ILoginResponseData } from "../types/auth";
-import { omitKeyFromObj } from "../utils/objHelper";
 import { IUserInfo } from "../types/express";
-import ErrorHandler from "../handlers/errorHandler";
+import { omitKeyFromObj } from "./objHelper";
+import { AUTH_MESSAGES } from "../constants/authData";
+import { ApiResponse } from "./apiResponseBuilder";
+import { RESPONSE_STATUS_CODES } from "../constants/apiResponseData";
+import UserService from "../services/userService";
 
-class AuthHandler {
+class AuthHelper {
   // Create token
   createToken(
     user_id: number,
@@ -18,12 +22,14 @@ class AuthHandler {
     });
   }
 
-  // Verify token
-  verifyToken(
-    token: string,
-    secret_key: string | undefined
-  ): string | JwtPayload {
-    return jwt.verify(token, secret_key || "");
+  // Get valid token
+  extractToken(req: Request): string | null {
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return null;
+    }
+    const tokenMatch = authorizationHeader.match(/^Bearer\s(.+)$/);
+    return tokenMatch ? tokenMatch[1] : null;
   }
 
   // Hash password
@@ -34,6 +40,22 @@ class AuthHandler {
   // Check password
   checkPassword(plainPassword: string, hashedPassword: string): boolean {
     return bcrypt.compareSync(plainPassword || "", hashedPassword || "");
+  }
+
+  // Verify token
+  async verifyToken(
+    token: string,
+    secret_key: string | undefined
+  ): Promise<IUserInfo> {
+    return new Promise((resolve, reject) => {
+      jwt.verify(token, secret_key as string, (err, user) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(user as IUserInfo);
+        }
+      });
+    });
   }
 
   // User validation
@@ -47,26 +69,32 @@ class AuthHandler {
       },
     });
 
-    const userData: User | undefined = user?.toJSON();
+    if (
+      !user?.toJSON() ||
+      !this.checkPassword(password, user?.toJSON().password)
+    ) {
+      const errorResponse = new ApiResponse()
+        .withStatusCode(RESPONSE_STATUS_CODES.UNPROCESSABLE_ENTITY)
+        .withMessage(AUTH_MESSAGES.LOGIN_ERROR)
+        .BuildErrorResponse();
 
-    if (!userData || !this.checkPassword(password, userData.password)) {
-      throw Error("Username or password is not correct");
+      throw errorResponse;
     }
 
     const access_token = this.createToken(
-      userData.id,
+      user.toJSON().id,
       process.env.JWT_SECRET_ACCESS_TOKEN,
       process.env.ACCESS_TOKEN_EXPIRY || "15m"
     );
 
     const refresh_token = this.createToken(
-      userData.id,
+      user.toJSON().id,
       process.env.JWT_SECRET_REFRESH_TOKEN,
       process.env.REFRESH_TOKEN_EXPIRY || "7d"
     );
 
     return {
-      user: omitKeyFromObj("password", userData),
+      user: omitKeyFromObj("password", user.get()),
       access_token,
       refresh_token,
     };
@@ -74,29 +102,25 @@ class AuthHandler {
 
   // Refresh token and get new access token
   async refreshToken(refresh_token: string): Promise<ILoginResponseData> {
-    const decoded = this.verifyToken(
+    const decoded = await this.verifyToken(
       refresh_token,
       process.env.JWT_SECRET_REFRESH_TOKEN
-    ) as IUserInfo;
+    );
 
     if (!decoded) {
-      throw Error("Refresh token is invalid or expired.");
+      throw Error(AUTH_MESSAGES.REFRESH_TOKEN_ERROR);
     }
 
-    const user = await User.findByPk(decoded?.user_id);
-
-    if (!user) {
-      throw new ErrorHandler().notFound();
-    }
+    const user = await UserService.findByIdOrFail(decoded?.user_id);
 
     const access_token = this.createToken(
-      user.id,
+      user.toJSON().id,
       process.env.JWT_SECRET_ACCESS_TOKEN,
       process.env.ACCESS_TOKEN_EXPIRY || "15m"
     );
 
     const response = {
-      user: user,
+      user: omitKeyFromObj("password", user.get()),
       access_token,
       refresh_token,
     };
@@ -105,4 +129,4 @@ class AuthHandler {
   }
 }
 
-export default new AuthHandler();
+export default new AuthHelper();

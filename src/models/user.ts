@@ -7,26 +7,7 @@ export interface CreateUser extends Omit<User, "id"> {}
 export interface UpdateUser extends Omit<User, "id" | "password"> {}
 
 class User extends Model {
-  private _id!: number;
-  private _username!: string;
-  private _password!: string;
-  private _email!: string;
-
-  set id(id: number) {
-    this._id = id;
-  }
-
-  set username(username: string) {
-    this._username = username;
-  }
-
-  set password(password: string) {
-    this._password = password;
-  }
-
-  set email(email: string) {
-    this._email = email;
-  }
+  [propName: string]: any;
 }
 
 User.init(
@@ -44,6 +25,7 @@ User.init(
     email: {
       type: DataTypes.STRING,
       allowNull: true,
+      unique: true,
     },
     password: {
       type: DataTypes.STRING,
